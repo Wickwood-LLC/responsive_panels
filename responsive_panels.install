@@ -49,6 +49,14 @@ function responsive_panels_requirements($phase) {
     }
     $requirements['responsive_panels_maatchMediaJS']['title'] = $t('Responsive Panesl matchMedia JS');
   }
+  if (module_exists('breakpoint_panels')) {
+    $requirements['responsive_panels_bpp'] = array(
+      'title' => $t('Responsive Panels'),
+      'value' => $t('Breakpoint Panels module exists'),
+      'description' => $t('Breakpoint Panels modules should not be enabled with Responsive Panels module. Please uninstall Breakpoint Panels module for proper working of Responsive Panels module.'),
+      'severity' => REQUIREMENT_ERROR,
+    );
+  }
   return $requirements;
 }
 
