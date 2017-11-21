@@ -480,6 +480,9 @@ function responsive_panels_panels_pane_output_alter(&$content, $pane, $args, $co
   }
 
   $data_query = '';
+  $wrapper_attributes = array(
+    'data-pane' => $pane->pid,
+  );
 
   if (isset($pane->configuration['responsive_pane_render_always']) && $pane->configuration['responsive_pane_render_always']) {
     // Keep real content intact.
@@ -550,13 +553,12 @@ function responsive_panels_panels_pane_output_alter(&$content, $pane, $args, $co
   }
 
   // Loop through the breakpoints that have been set and create a class for them.
-  $classes = '';
+  $wrapper_attributes['class'] = array();
   foreach ($pane->configuration['breakpoints'] as $bp => $val) {
     if (!$val) {
-      $classes .= ' hide-' . $bp;
+      $wrapper_attributes['class'][] = 'hide-' . $bp;
     }
   }
-  $classes = trim($classes);
 
   $ipemessage = '';
   $css = '';
@@ -587,16 +589,14 @@ function responsive_panels_panels_pane_output_alter(&$content, $pane, $args, $co
     $ipemessage = '<div class="ipemessage">' . $ipemessage . '<br /><br /></div>';
   }
 
-  // Preapre breakpoint group attributefor the wrapper.
+  // Preapre breakpoint group attribute for the wrapper.
   // This group name will be considered while determinining whether to load pane via ajax.
   if (!empty($pane->configuration['breakpoints_group']) && $pane->configuration['breakpoints_group'] != '__none') {
-    $group_attribute = 'data-bp-group="' . $pane->configuration['breakpoints_group'] . '"';
+    $wrapper_attributes['data-bp-group'] = $pane->configuration['breakpoints_group'];
   }
-  else {
-    $group_attribute = '';
-  }
+
   // Swap content out for a placeholder.
-  $content = '<div class="' . $classes . '" data-pane="' . $pane->pid . '" ' . $group_attribute .'>' . $ipemessage . $content_to_place . '</div>';
+  $content = '<div ' . drupal_attributes($wrapper_attributes) . '>' . $ipemessage . $content_to_place . '</div>';
 }
 
 /**
