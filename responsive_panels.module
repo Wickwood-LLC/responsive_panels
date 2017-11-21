@@ -725,10 +725,10 @@ function responsive_panels_form_views_exposed_form_alter(&$form, &$form_statet, 
  * Implements hook_panels_pane_prerender().
  */
 function responsive_panels_panels_pane_prerender($pane) {
-  if ($pane->type == 'views_panes') {
-    if (!responsive_panels_is_ajax_delivery($pane)) {
-      return;
-    }
-    $pane->breakpoint_active = TRUE;
+  if (!responsive_panels_is_ajax_delivery($pane)) {
+    return;
   }
+  // Mark the pane as breakpoint active.
+  // So its content will not be prepared thus saving system resources.
+  $pane->breakpoint_active = TRUE;
 }
