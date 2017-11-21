@@ -459,12 +459,11 @@ function responsive_panels_panels_pane_content_alter($content, $pane, $args, $co
   if (!responsive_panels_is_ajax_delivery($pane)) {
     return;
   }
-  // Set a flag so to tell this same hook not do the placeholder swap
-  // when the pane is rendered via AJAX.
-  $content->use_ajax_render = TRUE;
-
-  // Set value or hook_panels_panels_pane_output_alter() won't get called.
-  $content->content = 'It will be replaced anyway';
+  // Panes flagged 'render_always" will have real content, so not to overwrite it.
+  if (!isset($pane->configuration['responsive_pane_render_always']) || !$pane->configuration['responsive_pane_render_always']) {
+    // Set value or hook_panels_panels_pane_output_alter() won't get called.
+    $content->content = 'It will be replaced anyway';
+  }
 }
 
 /**
@@ -479,62 +478,76 @@ function responsive_panels_panels_pane_output_alter(&$content, $pane, $args, $co
   if (!responsive_panels_is_ajax_delivery($pane)) {
     return;
   }
-  // ensure we have Drupal.ajax
-  drupal_add_library('system', 'drupal.ajax');
 
-  // At this point we know we have a pane with Responsive Panels settings, so we need to
-  // swap out its contents for a placeholder and the content will be be loaded after
-  // page load via AJAX to allow for caching to work between screen sizes.
+  $data_query = '';
 
-  // Load the supporting libraries if available.
-  libraries_load('enquire.js');
-  libraries_load('matchMedia.js');
+  if (isset($pane->configuration['responsive_pane_render_always']) && $pane->configuration['responsive_pane_render_always']) {
+    // Keep real content intact.
+    $content_to_place = $content;
+  }
+  else {
+    // ensure we have Drupal.ajax
+    drupal_add_library('system', 'drupal.ajax');
 
-  // Load the modules .js file on the page
-  drupal_add_js(drupal_get_path('module', 'responsive_panels') . '/js/responsive_panels.js');
+    // At this point we know we have a pane with Responsive Panels settings, so we need to
+    // swap out its contents for a placeholder and the content will be be loaded after
+    // page load via AJAX to allow for caching to work between screen sizes.
 
-  $pass_context = array();
-  if (!module_exists('panels_mini') || !db_query("SELECT COUNT(pid) FROM {panels_mini} WHERE did = :did", array(':did' => $pane->did))->fetchField()) {
-    $task_context = page_manager_get_current_page();
-    if (stristr($task_context['name'], '-')) {
-      list($task_id, $subtask_id) = explode('-', $task_context['name']);
+    // Load the supporting libraries if available.
+    libraries_load('enquire.js');
+    libraries_load('matchMedia.js');
+
+    // Load the modules .js file on the page
+    drupal_add_js(drupal_get_path('module', 'responsive_panels') . '/js/responsive_panels.js');
+
+    $pass_context = array();
+    if (!module_exists('panels_mini') || !db_query("SELECT COUNT(pid) FROM {panels_mini} WHERE did = :did", array(':did' => $pane->did))->fetchField()) {
+      $task_context = page_manager_get_current_page();
+      if (stristr($task_context['name'], '-')) {
+        list($task_id, $subtask_id) = explode('-', $task_context['name']);
+      }
+      else {
+        $task_id = $task_context['name'];
+        $subtask_id = '';
+      }
+      $pass_context['task'] = $task_id;
+      $pass_context['subtask'] = $subtask_id;
     }
-    else {
-      $task_id = $task_context['name'];
-      $subtask_id = '';
+
+    if (!empty($pane->pid)) {
+      $pass_context['pid'] = $pane->pid;
     }
-    $pass_context['task'] = $task_id;
-    $pass_context['subtask'] = $subtask_id;
-  }
-
-  if (!empty($pane->pid)) {
-    $pass_context['pid'] = $pane->pid;
-  }
-  if (!empty($args)) {
-    $pass_context['args'] = $args;
-  }
-
-  if (!empty($display->did)) {
-    $pass_context['did'] = $display->did;
-  }
-
-  // Check for panelizer, and pass context so that it can be rebuilt.
-  if (!empty($context['panelizer'])) {
-    $pass_context['panelizer'] = 1;
-    if (!empty($context['panelizer']->keyword)) {
-      $pass_context['panelizer_keyword'] = $context['panelizer']->keyword;
+    if (!empty($args)) {
+      $pass_context['args'] = $args;
     }
-    if (!empty($context['panelizer']->argument)) {
-      $pass_context['panelizer_argument'] = $context['panelizer']->argument;
+
+    if (!empty($display->did)) {
+      $pass_context['did'] = $display->did;
     }
+
+    // Check for panelizer, and pass context so that it can be rebuilt.
+    if (!empty($context['panelizer'])) {
+      $pass_context['panelizer'] = 1;
+      if (!empty($context['panelizer']->keyword)) {
+        $pass_context['panelizer_keyword'] = $context['panelizer']->keyword;
+      }
+      if (!empty($context['panelizer']->argument)) {
+        $pass_context['panelizer_argument'] = $context['panelizer']->argument;
+      }
+    }
+
+    // Serailize and encode the arguments needed to rebuild the context after an
+    // AJAX request asks for this pane's contents. Make this into a URL for the AJAX call.
+    $url = 'responsive-panels/get-panes/' . base64_encode(serialize($pass_context));
+
+    // Create an ID for the pane to be assigned in the DOM.
+    $id = uniqid('responsive-panels-pane-' . $pane->pid . '-');
+
+    if ($pane->type == 'views_panes') {
+      $data_query = 'data-query="' . htmlentities(json_encode((object) drupal_get_query_parameters())) . '"';
+    }
+    $content_to_place = '<div id="' . $id . '" class="bp-ajax-pane" data-src="' . $url . '" ' . $data_query . '></div>';
   }
-
-  // Serailize and encode the arguments needed to rebuild the context after an
-  // AJAX request asks for this pane's contents. Make this into a URL for the AJAX call.
-  $url = 'responsive-panels/get-panes/' . base64_encode(serialize($pass_context));
-
-  // Create an ID for the pane to be assigned in the DOM.
-  $id = uniqid('responsive-panels-pane-' . $pane->pid . '-');
 
   // Loop through the breakpoints that have been set and create a class for them.
   $classes = '';
@@ -573,12 +586,7 @@ function responsive_panels_panels_pane_output_alter(&$content, $pane, $args, $co
   if (!empty($ipemessage)) {
     $ipemessage = '<div class="ipemessage">' . $ipemessage . '<br /><br /></div>';
   }
-  if ($pane->type == 'views_panes') {
-    $data_query = 'data-query="' . htmlentities(json_encode((object) drupal_get_query_parameters())) . '"';
-  }
-  else {
-    $data_query = '';
-  }
+
   // Preapre breakpoint group attributefor the wrapper.
   // This group name will be considered while determinining whether to load pane via ajax.
   if (!empty($pane->configuration['breakpoints_group']) && $pane->configuration['breakpoints_group'] != '__none') {
@@ -588,7 +596,7 @@ function responsive_panels_panels_pane_output_alter(&$content, $pane, $args, $co
     $group_attribute = '';
   }
   // Swap content out for a placeholder.
-  $content = '<div class="' . $classes . '" data-pane="' . $pane->pid . '" ' . $group_attribute .'>' . $ipemessage . '<div id="' . $id . '" class="bp-ajax-pane" data-src="' . $url . '" ' . $data_query . '></div></div>';
+  $content = '<div class="' . $classes . '" data-pane="' . $pane->pid . '" ' . $group_attribute .'>' . $ipemessage . $content_to_place . '</div>';
 }
 
 /**
