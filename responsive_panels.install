@@ -49,3 +49,13 @@ function responsive_panels_requirements($phase) {
   }
   return $requirements;
 }
+
+/**
+ * Implements hook_uninstall()
+ */
+function responsive_panels_uninstall() {
+  variable_del('responsive_panels_load_hidden_admins');
+  variable_del('responsive_panels_load_hidden');
+  variable_del('responsive_panels_breakpoint_reload');
+  variable_del('responsive_panels_show_types');
+}
