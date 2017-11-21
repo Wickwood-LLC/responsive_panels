@@ -479,7 +479,6 @@ function responsive_panels_panels_pane_output_alter(&$content, $pane, $args, $co
     return;
   }
 
-  $data_query = '';
   $wrapper_attributes = array(
     'data-pane' => $pane->pid,
   );
