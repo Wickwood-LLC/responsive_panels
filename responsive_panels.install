@@ -28,24 +28,26 @@ function responsive_panels_requirements($phase) {
         'severity' => REQUIREMENT_ERROR,
       );
     }
+    $requirements['enquire.js']['title'] = $t('Responsive Panesl Enquire JS');
 
-    $matchMediaJS = libraries_detect('enquire.js');
+    $matchMediaJS = libraries_detect('matchMedia.js');
 
     if ($matchMediaJS['installed']) {
       $version = explode('.', $matchMediaJS['version']);
 
       $requirements['maatchMediaJS'] = array(
-        'value' => $matchMediaJS['version'],
+        'value' => $t('Exists'),
         'severity' => REQUIREMENT_OK,
       );
     }
     else {
       $requirements['maatchMediaJS'] = array(
         'value' => $t('matchMedia library not found.'),
-        'description' => $t('The matchMedia library could not be detected. Please consult the README.md for installation instructions.'),
+        'description' => $t('The matchMedia library could not be detected. It is required to support older versions of browsers. Please consult the README.md for installation instructions.'),
         'severity' => REQUIREMENT_WARNING,
       );
     }
+    $requirements['maatchMediaJS']['title'] = $t('Responsive Panesl matchMedia JS');
   }
   return $requirements;
 }

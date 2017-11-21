@@ -50,6 +50,11 @@ function responsive_panels_menu() {
 function responsive_panels_libraries_info() {
   $libraries['enquire.js'] = array(
     'name' => 'enquire.js',
+    'version arguments' => array(
+      'file' => 'enquire.min.js',
+      'pattern' => '/enquire.js v([0-9a-zA-Z\.-]+)/',
+      'lines' => 2,
+    ),
     'files' => array(
       'js' => array(
         'enquire.min.js',
@@ -58,6 +63,7 @@ function responsive_panels_libraries_info() {
   );
   $libraries['matchMedia.js'] = array(
     'name' => 'matchMedia.js',
+    'version' => 'Any',
     'files' => array(
       'js' => array(
         'matchMedia.addListener.js',
