@@ -1,0 +1,51 @@
+<?php
+
+/**
+ * Implements hook_requirements()
+ */
+function responsive_panels_requirements($phase) {
+  $requirements = array();
+
+  // Ensure translations don't break during installation.
+  $t = get_t();
+
+  // Check to see if the flexslider library is available
+  if ($phase == 'runtime') {
+    $enquireJS = libraries_detect('enquire.js');
+
+    if ($enquireJS['installed']) {
+      $version = explode('.', $enquireJS['version']);
+
+      $requirements['enquire.js'] = array(
+        'value' => $enquireJS['version'],
+        'severity' => REQUIREMENT_OK,
+      );
+    }
+    else {
+      $requirements['enquire.js'] = array(
+        'value' => $t('enquire.js library not found.'),
+        'description' => $t('The enquire.js library could not be detected. Please consult the README.md for installation instructions.'),
+        'severity' => REQUIREMENT_ERROR,
+      );
+    }
+
+    $matchMediaJS = libraries_detect('enquire.js');
+
+    if ($matchMediaJS['installed']) {
+      $version = explode('.', $matchMediaJS['version']);
+
+      $requirements['maatchMediaJS'] = array(
+        'value' => $matchMediaJS['version'],
+        'severity' => REQUIREMENT_OK,
+      );
+    }
+    else {
+      $requirements['maatchMediaJS'] = array(
+        'value' => $t('matchMedia library not found.'),
+        'description' => $t('The matchMedia library could not be detected. Please consult the README.md for installation instructions.'),
+        'severity' => REQUIREMENT_WARNING,
+      );
+    }
+  }
+  return $requirements;
+}
