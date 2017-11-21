@@ -16,7 +16,7 @@
       // If no breakpoints found, then these are not the droids you're looking for, move along.
       if (
         Drupal.settings.responsive_panels_breakpoint['breakpoints'] == 'undefined'
-        || Drupal.settings.responsive_panels_breakpoint['breakpoints']['hasEnquire'] == false
+        || !enquire || !enquire.register
       ) {
         return;
       }
@@ -275,7 +275,7 @@
           if (!$(this).hasClass('active')) {
 
             for (var breakpoint_r in breakpoints) {
-              if (settings['hasEnquire'] == true) {
+              if (enquire && enquire.register) {
                 enquire.register(breakpoints[breakpoint_r]['bp'], breakpoints[breakpoint_r]['toggle_handler']);
               }
             }
@@ -286,7 +286,7 @@
           }
           else {
             for (var breakpoint_u in breakpoints) {
-              if (settings['hasEnquire'] == true) {
+              if (enquire && enquire.register) {
                 enquire.unregister(breakpoints[breakpoint_u]['bp'], breakpoints[breakpoint_u]['toggle_handler']);
               }
             }

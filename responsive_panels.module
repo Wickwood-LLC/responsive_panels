@@ -291,46 +291,6 @@ function responsive_panels_panels_pre_render($display) {
   drupal_add_js(array(
     'responsive_panels_breakpoint' => $settings,
   ), 'setting');
-
-  // Set enquire.js requirement warning.
-  if (!$settings['hasEnquire']) {
-    $msg = t('Responsive Panels requires the enquire.js library. Please download the enquire.min.js file from http://wicky.nillia.ms/enquire.js/ and make sure it is here:<br/>/sites/<"all" or site>/libraries/enquire.js/enquire.min.js');
-
-    // Make sure we only set the message once instead of once for each pane on the page.
-    $existing_msgs = drupal_get_messages('error');
-    $exists = FALSE;
-    if (isset($existing_msgs['error'])) {
-      foreach ($existing_msgs['error'] as $m) {
-        if ($m == $msg) {
-          $exists = TRUE;
-        }
-      }
-    }
-
-    if (!$exists) {
-      drupal_set_message($msg, 'error');
-    }
-  }
-
-  // Set enquire.js requirement warning.
-  if (!$settings['hasMatchMedia']) {
-    $msg = t('The enquire.js library used by Responsive Panels will display more accurately on older browsers like IE if you install the MatchMedia.js library. Please download the matchMedia.js and matchMedia.addListener.js files from https://github.com/paulirish/matchMedia.js/ and make sure they are here:<br/>/sites/<"all" or site>/libraries/matchMedia.js/matchMedia.js<br/>/sites/<"all" or site>/libraries/matchMedia.js/matchMedia.addListener.js');
-
-    // Make sure we only set the message once instead of once for each pane on the page.
-    $existing_msgs = drupal_get_messages('warning');
-    $exists = FALSE;
-    if (isset($existing_msgs['warning'])) {
-      foreach ($existing_msgs['warning'] as $m) {
-        if ($m == $msg) {
-          $exists = TRUE;
-        }
-      }
-    }
-
-    if (!$exists) {
-      drupal_set_message($msg, 'warning');
-    }
-  }
 }
 
 /**
@@ -395,21 +355,6 @@ function responsive_panels_get_config() {
   $conf['showtypes'] = variable_get('responsive_panels_show_types', 'all');
   $conf['isloggedin'] = user_is_logged_in();
 
-  $conf['hasEnquire'] = FALSE;
-  $enquire_path = libraries_get_path('enquire.js');
-  if ($enquire_path && file_exists($enquire_path . '/enquire.min.js')) {
-    $conf['hasEnquire'] = TRUE;
-  }
-
-  $conf['hasMatchMedia'] = FALSE;
-  $match_media_path = libraries_get_path('matchMedia.js');
-  if (
-    $match_media_path
-    && file_exists($match_media_path . '/matchMedia.js')
-    && file_exists($match_media_path . '/matchMedia.addListener.js')
-  ) {
-    $conf['hasMatchMedia'] = TRUE;
-  }
   // Pass current Drupal query path, so Ajax requests can pass back it to server.
   $conf['q'] = $_GET['q'];
 
