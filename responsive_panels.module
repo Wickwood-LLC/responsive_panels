@@ -137,8 +137,8 @@ function responsive_panels_modal_popup($js = NULL, $plugin_name, $cache_key, $pi
   if (empty($form_state['executed'])) {
     $output = $modal_output;
   } else {
-    // Normally the pane object should reflect changes happend in responsive_panels_pane_settings_form_submit
-    // but it is not happenning as we now we have ajax callback.
+    // Normally the pane object should reflect changes happened in responsive_panels_pane_settings_form_submit
+    // but it is not happening as we now we have ajax callback.
     // So, we take updated pane object back from $form_state.
     // TODO: Remove this line after finding proper way to handle the issue.
     $renderer->cache->display->content[$pid] = $form_state['pane'];
@@ -164,7 +164,7 @@ function responsive_panels_pane_settings_form($style_settings, $form_state) {
 
   $form['help'] = array(
     '#type' => 'markup',
-    '#markup' => "Note that by default panes are displayed unless the display is disabled for a given breakpoint width range.  So if you do not have breakpoints that cover the entire range of possible screen widths starting from 0px and going to ∞ px in your selected Breakpoint Group, the pane will be displayed for any widths not explicitly disabled."
+    '#markup' => "Note that by default panes are displayed unless the display is disabled for any given breakpoint width range.  So if you do not have breakpoints that cover the entire range of possible screen widths starting from 0px and going to ∞ px in your selected Breakpoint Group, the pane will be displayed for any widths not explicitly disabled."
   );
 
   // As per https://www.drupal.org/node/1363174
@@ -211,11 +211,10 @@ function responsive_panels_pane_settings_form($style_settings, $form_state) {
   // Loop through the breakpoints and check for existing settings.
   foreach ($bps as $bp) {
     $default = TRUE;
-    if (!empty($pane->configuration['breakpoints'])) {
-      if (isset($pane->configuration['breakpoints'][$bp->responsive_panels_name])) {
-        $default = $pane->configuration['breakpoints'][$bp->responsive_panels_name];
-      }
+    if (isset($pane->configuration['breakpoints'][$bp->responsive_panels_name])) {
+      $default = $pane->configuration['breakpoints'][$bp->responsive_panels_name];
     }
+
 
     $form['all_elements'][$bp->responsive_panels_name] = array(
       '#type' => 'checkbox',
@@ -227,13 +226,13 @@ function responsive_panels_pane_settings_form($style_settings, $form_state) {
     '#type' => 'fieldset',
     '#title' => t('Rendering'),
   );
-  $form['all_elements']['rendering']['breakpoint_pane_render_always'] = array(
+  $form['all_elements']['rendering']['responsive_pane_render_always'] = array(
     '#type' => 'checkbox',
     '#title' => t('Render always'),
     '#description' => t('Normally content for a breakpoint enabled pane does not need to be prepared while the page is being executed because Responsive Panels will replace the panel content with a placeholder later. This placeholder will then be replaced via Ajax as required as per screen dimensions.<br>'
       . 'That normal behavior is sufficient in most cases. However, sometimes panel content may have JavaScript behaviors that will not work properly in breakpoint enabled panes if content is not prepared while the page is being executed. For example a views slideshow needs to be prepared with the page itself in order to work properly. In these edge cases, you can enable this checkbox to fix such issues.<br/> '
       . 'Note: This checkbox is disabled by default.'),
-    '#default_value' => isset($pane->configuration['breakpoint_pane_render_always']) ? $pane->configuration['breakpoint_pane_render_always'] : false,
+    '#default_value' => isset($pane->configuration['responsive_pane_render_always']) ? $pane->configuration['responsive_pane_render_always'] : false,
   );
 
   $form['submit'] = array(
@@ -270,7 +269,7 @@ function responsive_panels_pane_settings_form_submit(&$form, &$form_state) {
     }
     $pane->configuration['breakpoints'][$bp->responsive_panels_name] = $form['all_elements'][$bp->responsive_panels_name]['#value'];
   }
-  $pane->configuration['breakpoint_pane_render_always'] = $form_state['values']['breakpoint_pane_render_always'];
+  $pane->configuration['responsive_pane_render_always'] = $form_state['values']['responsive_pane_render_always'];
   $form_state['executed'] = TRUE;
   $form_state['pane'] = $pane;
   return;
