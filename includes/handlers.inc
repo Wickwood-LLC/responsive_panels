@@ -32,22 +32,17 @@ function responsive_panels_get_panes() {
   ctools_include('content');
   ctools_include('context');
   ctools_include('context-task-handler');
+  // Backup existing query.
   $old_q = $_GET['q'];
 
   $commands = array();
   foreach ($_POST['panes'] as $pane_data) {
-    $parsed_url = parse_url($pane_data['url']);
-    $path_parts = explode('/', $parsed_url['path']);
-    $get_params = array();
-    parse_str($parsed_url['query'], $get_params);
-    // Earlier it was coded under responsive_panels_views_pre_execute().
-    // See git commit: 7eba93abbfb4c38b43015bd84bc6f1c5821aae2a
-    $_GET['q'] = html_entity_decode($get_params['bp_original_q']);
+    $_GET['q'] = html_entity_decode($pane_data['query']);
 
-    $encoded_context = $path_parts[2];
-    $element_id = $path_parts[3];
+    $encoded_context = $pane_data['context'];
+    $element_id = $pane_data['id'];
 
-    // todo: may be able to better accomodate a more universal context support.
+    // TODO: may be able to better accomodate a more universal context support.
     // Check for a context and decode it.
     $context = array();
     if (!empty($encoded_context)) {
@@ -56,10 +51,9 @@ function responsive_panels_get_panes() {
     $task_id = $context['task'];
     $subtask_id = isset($context['subtask']) ? $context['subtask'] : '';
 
-    // @todo Decide whether we should throw a 404 given that we have not enough
-    //   context.
+    // TODO: Decide whether we should throw a 404 given that we have not enough
+    // context.
     $pid = !empty($context['pid']) ? $context['pid'] : 0;
-
     $did = !empty($context['did']) ? $context['did'] : 0;
 
     // Initialize emtpy array if not set.
@@ -124,7 +118,7 @@ function responsive_panels_get_panes() {
     $replace = theme('panels_pane', $variables);
     $commands[] = ajax_command_replace('#' . $element_id, $replace);
   }
-  // Requestore original query params.
+  // Restore original query.
   $_GET['q'] = $old_q;
 
   $page = array('#type' => 'ajax', '#commands' => $commands);

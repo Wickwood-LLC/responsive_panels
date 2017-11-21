@@ -308,19 +308,13 @@
         // Does an AJAX request for the pane contents if it has not yet been loaded.
         // Need to check if element does exist since it might have replaced already.
         if (element.length && !element.hasClass('processed')) {
-          var url = element.attr('data-src');
-          var submit_data = {};
-          submit_data.url = url + '/' + element.attr('id');
-          // 'data-query' attribute will be present if pane is view pane.
-          // Query parameters to be passed as part of URL. So, correct filtering
-          // will be applied.
-          var data_query = $(element).attr('data-query');
-          var params = {};
-          if (typeof data_query !== typeof undefined && data_query !== false) {
-            params = JSON.parse($('<textarea />').html(data_query).text())
-          }
-          params.bp_original_q = encodeURI(Drupal.settings.responsive_panels_breakpoint.q);
-          submit_data.url = submit_data.url + '?' + $.param(params);
+          var submit_data = {
+            id: element.attr('id'),
+            context: element.attr('data-context'),
+            // 'data-query' attribute will be present if pane is view pane.
+            // It is to pass original query params to view to generate correct results.
+            query: $(element).attr('data-query')
+          };
           base = element.attr('id');
           element.addClass('processed');
           panes_submit_data.push(submit_data);

@@ -540,9 +540,9 @@ function responsive_panels_panels_pane_output_alter(&$content, $pane, $args, $co
       }
     }
 
-    // Serailize and encode the arguments needed to rebuild the context after an
-    // AJAX request asks for this pane's contents. Make this into a URL for the AJAX call.
-    $attributes['data-src'] = 'responsive-panels/get-panes/' . base64_encode(serialize($pass_context));
+    // Serailize and encode the arguments needed to rebuild the context.
+    // AJAX request will pass this info back to server.
+    $attributes['data-context'] = base64_encode(serialize($pass_context));
 
     // Create an ID for the pane to be assigned in the DOM.
     $attributes['id'] = uniqid('responsive-panels-pane-' . $pane->pid . '-');
