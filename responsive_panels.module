@@ -489,6 +489,7 @@ function responsive_panels_panels_pane_output_alter(&$content, $pane, $args, $co
     $content_to_place = $content;
   }
   else {
+    $attributes = array();
     // ensure we have Drupal.ajax
     drupal_add_library('system', 'drupal.ajax');
 
@@ -541,15 +542,16 @@ function responsive_panels_panels_pane_output_alter(&$content, $pane, $args, $co
 
     // Serailize and encode the arguments needed to rebuild the context after an
     // AJAX request asks for this pane's contents. Make this into a URL for the AJAX call.
-    $url = 'responsive-panels/get-panes/' . base64_encode(serialize($pass_context));
+    $attributes['data-src'] = 'responsive-panels/get-panes/' . base64_encode(serialize($pass_context));
 
     // Create an ID for the pane to be assigned in the DOM.
-    $id = uniqid('responsive-panels-pane-' . $pane->pid . '-');
+    $attributes['id'] = uniqid('responsive-panels-pane-' . $pane->pid . '-');
+    $attributes['class'][] = 'bp-ajax-pane';
 
     if ($pane->type == 'views_panes') {
-      $data_query = 'data-query="' . htmlentities(json_encode((object) drupal_get_query_parameters())) . '"';
+      $attributes['data-query'] = htmlentities(json_encode((object) drupal_get_query_parameters())) . '"';
     }
-    $content_to_place = '<div id="' . $id . '" class="bp-ajax-pane" data-src="' . $url . '" ' . $data_query . '></div>';
+    $content_to_place = '<div ' . drupal_attributes($attributes) . '></div>';
   }
 
   // Loop through the breakpoints that have been set and create a class for them.
