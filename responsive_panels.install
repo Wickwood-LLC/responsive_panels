@@ -16,38 +16,38 @@ function responsive_panels_requirements($phase) {
     if ($enquireJS['installed']) {
       $version = explode('.', $enquireJS['version']);
 
-      $requirements['enquire.js'] = array(
+      $requirements['responsive_panels_enquire.js'] = array(
         'value' => $enquireJS['version'],
         'severity' => REQUIREMENT_OK,
       );
     }
     else {
-      $requirements['enquire.js'] = array(
+      $requirements['responsive_panels_enquire.js'] = array(
         'value' => $t('enquire.js library not found.'),
         'description' => $t('The enquire.js library could not be detected. Please consult the README.md for installation instructions.'),
         'severity' => REQUIREMENT_ERROR,
       );
     }
-    $requirements['enquire.js']['title'] = $t('Responsive Panesl Enquire JS');
+    $requirements['responsive_panels_enquire.js']['title'] = $t('Responsive Panesl Enquire JS');
 
     $matchMediaJS = libraries_detect('matchMedia.js');
 
     if ($matchMediaJS['installed']) {
       $version = explode('.', $matchMediaJS['version']);
 
-      $requirements['maatchMediaJS'] = array(
+      $requirements['responsive_panels_maatchMediaJS'] = array(
         'value' => $t('Exists'),
         'severity' => REQUIREMENT_OK,
       );
     }
     else {
-      $requirements['maatchMediaJS'] = array(
+      $requirements['responsive_panels_maatchMediaJS'] = array(
         'value' => $t('matchMedia library not found.'),
         'description' => $t('The matchMedia library could not be detected. It is required to support older versions of browsers. Please consult the README.md for installation instructions.'),
         'severity' => REQUIREMENT_WARNING,
       );
     }
-    $requirements['maatchMediaJS']['title'] = $t('Responsive Panesl matchMedia JS');
+    $requirements['responsive_panels_maatchMediaJS']['title'] = $t('Responsive Panesl matchMedia JS');
   }
   return $requirements;
 }
