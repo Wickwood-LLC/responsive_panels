@@ -1,0 +1,780 @@
+<?php
+/**
+ * @file
+ * Responsive Panels for the Panels and Breakpoint modules.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function responsive_panels_menu() {
+  $items = array();
+
+  // Responsive Panels configuration page.
+  $items['admin/config/user-interface/responsive_panels'] = array(
+    'title' => 'Responsive Panels',
+    'description' => 'Configure responsive panels.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('responsive_panels_settings'),
+    'access arguments' => array('administer breakpoints'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'includes/admin_page.inc',
+  );
+
+  // Modal pop-up form for assigning breakpoints to panes.
+  $items['responsive_panels/%ctools_js/settings/form/%/%/%'] = array(
+    'title' => t('Responsive Pane'),
+    'page callback' => 'responsive_panels_modal_popup',
+    'page arguments' => array(1, 4, 5, 6),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+    'theme callback' => 'ajax_base_page_theme',
+  );
+
+  $items['responsive-panels/get-panes'] = array(
+    'title' => 'Responsive Panels AJAX pane handler',
+    'page callback' => 'responsive_panels_get_panes',
+    'page arguments' => array(),
+    'access callback' => TRUE,
+    'delivery callback' => 'responsive_panels_ajax_deliver',
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/handlers.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_libraries_info().
+ */
+function responsive_panels_libraries_info() {
+  $libraries['enquire.js'] = array(
+    'name' => 'enquire.js',
+    'files' => array(
+      'js' => array(
+        'enquire.min.js',
+      ),
+    ),
+  );
+  $libraries['matchMedia.js'] = array(
+    'name' => 'matchMedia.js',
+    'files' => array(
+      'js' => array(
+        'matchMedia.addListener.js',
+        'matchMedia.js',
+      ),
+    ),
+  );
+
+  return $libraries;
+}
+
+/**
+ * Implements hook_panels_ipe_pane_links_alter().
+ *
+ * Displays the "BP" button in the IPE.
+ */
+function responsive_panels_panels_ipe_pane_links_alter(&$links, $pane, $display) {
+  if (isset($pane['pane']->pid) && isset($pane['display']->cache_key)) {
+    $cache_key = $pane['display']->cache_key;
+    $links['global'] = array(
+      'title' => t('Breakpoint settings'),
+      'href' => 'responsive_panels/nojs/settings/form/' . $pane['renderer']->plugin['name'] . '/' . $cache_key . '/' . $pane['pane']->pid,
+      'attributes' => array(
+        'class' => 'ctools-use-modal ctools-modal-modal-popup-small',
+      ),
+    );
+  }
+}
+
+/**
+ * Implements hook_get_pane_links_alter().
+ */
+function responsive_panels_get_pane_links_alter(&$links, $pane, $content_type, $renderer) {
+  if (!empty($pane->pid)) {
+    $cache_key = $renderer->display->cache_key;
+
+    $links['style']['breakpoint_settings'] = array(
+      'title' => t('Breakpoint settings'),
+      'href' => 'responsive_panels/nojs/settings/form/editor/' . $cache_key . '/' . $pane->pid,
+      'attributes' => array('class' => array('ctools-use-modal')),
+    );
+  }
+}
+
+/**
+ * Creates a modal popup.
+ * a lot of this code taken from panels_renderer_editor.class
+ */
+function responsive_panels_modal_popup($js = NULL, $plugin_name, $cache_key, $pid) {
+  ctools_include('display-edit', 'panels');
+  ctools_include('plugins', 'panels');
+  ctools_include('ajax');
+  ctools_include('modal');
+  ctools_include('context');
+  ctools_include('content');
+
+  $plugin = panels_get_display_renderer($plugin_name);
+  $cache = panels_edit_cache_get($cache_key);
+  $renderer = panels_get_renderer_handler($plugin, $cache->display);
+
+  $renderer->cache = &$cache;
+  ctools_include('cleanstring');
+  $renderer->clean_key = ctools_cleanstring($cache_key);
+
+  $pane = &$renderer->cache->display->content[$pid];
+  $subtype = ctools_content_get_subtype($pane->type, $pane->subtype);
+
+  $form_state = array(
+    'display' => &$renderer->display,
+    'pane' => &$pane,
+    'ajax' => TRUE,
+    'title' => t('Configure breakpoint settings on !subtype_title', array('!subtype_title' => $subtype['title'])),
+  );
+
+  $modal_output = ctools_modal_form_wrapper('responsive_panels_pane_settings_form', $form_state);
+
+  if (empty($form_state['executed'])) {
+    $output = $modal_output;
+  } else {
+    // Normally the pane object should reflect changes happend in responsive_panels_pane_settings_form_submit
+    // but it is not happenning as we now we have ajax callback.
+    // So, we take updated pane object back from $form_state.
+    // TODO: Remove this line after finding proper way to handle the issue.
+    $renderer->cache->display->content[$pid] = $form_state['pane'];
+
+    panels_edit_cache_set($renderer->cache);
+    $renderer->command_update_pane($pid);
+    $renderer->commands[] = ctools_modal_command_dismiss();
+    $output = $renderer->commands;
+  }
+
+  print ajax_render($output);
+  drupal_exit();
+}
+
+/**
+ * Settings form callback.
+ *
+ * Create the setting form displayed in the modal popup when assigning
+ * breakpoints to panes.
+ */
+function responsive_panels_pane_settings_form($style_settings, $form_state) {
+  $form = array();
+
+  $form['help'] = array(
+    '#type' => 'markup',
+    '#markup' => "Note that by default panes are displayed unless the display is disabled for a given breakpoint width range.  So if you do not have breakpoints that cover the entire range of possible screen widths starting from 0px and going to ∞ px in your selected Breakpoint Group, the pane will be displayed for any widths not explicitly disabled."
+  );
+
+  // As per https://www.drupal.org/node/1363174
+  $form['all_elements'] = array(
+    '#prefix' => '<div id="responsive-panels-settings-form-all-elements">',
+    '#suffix' => '</div>',
+  );
+
+  $pane = $form_state['pane'];
+
+  $breakpoint_groups = breakpoints_breakpoint_group_load_all();
+
+  $bp_group_options = array(
+    '__none' => t('None (all breakpoints)'),
+  );
+
+  foreach ($breakpoint_groups as $breakpoint_group) {
+    $bp_group_options[$breakpoint_group->machine_name] = $breakpoint_group->name;
+  }
+
+  if (!empty($form_state['values']['breakpoints_group'])) {
+    $default_bp_group = $form_state['values']['breakpoints_group'];
+  }
+  else {
+    $default_bp_group = !empty($pane->configuration['breakpoints_group'])
+      ? $pane->configuration['breakpoints_group']
+      : '__none';
+  }
+  $bps = responsive_panels_get_breakpoints($default_bp_group);
+
+  $form['all_elements']['breakpoints_group'] = array(
+    '#title' => t('Group'),
+    '#type' => 'radios',
+    '#options' => $bp_group_options,
+    '#default_value' => $default_bp_group,
+    '#ajax' => array(
+      'callback' => 'responsive_panels_pane_settings_form_js',
+      'wrapper' => 'responsive-panels-settings-form-all-elements',
+      'method' => 'replace',
+      'effect' => 'fade',
+    ),
+  );
+
+  // Loop through the breakpoints and check for existing settings.
+  foreach ($bps as $bp) {
+    $default = TRUE;
+    if (!empty($pane->configuration['breakpoints'])) {
+      if (isset($pane->configuration['breakpoints'][$bp->responsive_panels_name])) {
+        $default = $pane->configuration['breakpoints'][$bp->responsive_panels_name];
+      }
+    }
+
+    $form['all_elements'][$bp->responsive_panels_name] = array(
+      '#type' => 'checkbox',
+      '#title' => filter_xss(t('Display ' . $bp->name)),
+      '#default_value' => $default,
+    );
+  }
+  $form['all_elements']['rendering'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Rendering'),
+  );
+  $form['all_elements']['rendering']['breakpoint_pane_render_always'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Render always'),
+    '#description' => t('Normally content for a breakpoint enabled pane does not need to be prepared while the page is being executed because Responsive Panels will replace the panel content with a placeholder later. This placeholder will then be replaced via Ajax as required as per screen dimensions.<br>'
+      . 'That normal behavior is sufficient in most cases. However, sometimes panel content may have JavaScript behaviors that will not work properly in breakpoint enabled panes if content is not prepared while the page is being executed. For example a views slideshow needs to be prepared with the page itself in order to work properly. In these edge cases, you can enable this checkbox to fix such issues.<br/> '
+      . 'Note: This checkbox is disabled by default.'),
+    '#default_value' => isset($pane->configuration['breakpoint_pane_render_always']) ? $pane->configuration['breakpoint_pane_render_always'] : false,
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+  );
+
+  return $form;
+}
+
+/**
+ * Menu callback for change in Breakpoint group change.
+ * @see responsive_panels_pane_settings_form()
+ */
+function responsive_panels_pane_settings_form_js($form, $form_state) {
+  return $form['all_elements'];
+}
+
+/**
+ * Settings form submission.
+ *
+ * Processes the modal popup settings form after the user has selected which
+ * breakpoints a pane will be displayed.
+ */
+function responsive_panels_pane_settings_form_submit(&$form, &$form_state) {
+  $bps = responsive_panels_get_breakpoints($form_state['values']['breakpoints_group']);
+  $pane = $form_state['pane'];
+
+  $pane->configuration['breakpoints_group'] = $form_state['values']['breakpoints_group'];
+  $pane->configuration['breakpoints'] = array();
+  foreach ($bps as $bp) {
+    if (!$bp || !isset($form['all_elements'][$bp->responsive_panels_name])) {
+      continue;
+    }
+    $pane->configuration['breakpoints'][$bp->responsive_panels_name] = $form['all_elements'][$bp->responsive_panels_name]['#value'];
+  }
+  $pane->configuration['breakpoint_pane_render_always'] = $form_state['values']['breakpoint_pane_render_always'];
+  $form_state['executed'] = TRUE;
+  $form_state['pane'] = $pane;
+  return;
+}
+
+/**
+ * Implements hook_panels_pre_render().
+ *
+ * Add the Responsive Panels configuration settings to js settings.
+ */
+function responsive_panels_panels_pre_render($display) {
+  $settings = responsive_panels_get_config();
+  drupal_add_js(array(
+    'responsive_panels_breakpoint' => $settings,
+  ), 'setting');
+
+  // Set enquire.js requirement warning.
+  if (!$settings['hasEnquire']) {
+    $msg = t('Responsive Panels requires the enquire.js library. Please download the enquire.min.js file from http://wicky.nillia.ms/enquire.js/ and make sure it is here:<br/>/sites/<"all" or site>/libraries/enquire.js/enquire.min.js');
+
+    // Make sure we only set the message once instead of once for each pane on the page.
+    $existing_msgs = drupal_get_messages('error');
+    $exists = FALSE;
+    if (isset($existing_msgs['error'])) {
+      foreach ($existing_msgs['error'] as $m) {
+        if ($m == $msg) {
+          $exists = TRUE;
+        }
+      }
+    }
+
+    if (!$exists) {
+      drupal_set_message($msg, 'error');
+    }
+  }
+
+  // Set enquire.js requirement warning.
+  if (!$settings['hasMatchMedia']) {
+    $msg = t('The enquire.js library used by Responsive Panels will display more accurately on older browsers like IE if you install the MatchMedia.js library. Please download the matchMedia.js and matchMedia.addListener.js files from https://github.com/paulirish/matchMedia.js/ and make sure they are here:<br/>/sites/<"all" or site>/libraries/matchMedia.js/matchMedia.js<br/>/sites/<"all" or site>/libraries/matchMedia.js/matchMedia.addListener.js');
+
+    // Make sure we only set the message once instead of once for each pane on the page.
+    $existing_msgs = drupal_get_messages('warning');
+    $exists = FALSE;
+    if (isset($existing_msgs['warning'])) {
+      foreach ($existing_msgs['warning'] as $m) {
+        if ($m == $msg) {
+          $exists = TRUE;
+        }
+      }
+    }
+
+    if (!$exists) {
+      drupal_set_message($msg, 'warning');
+    }
+  }
+}
+
+/**
+ * Returns the configuration for the Responsive Panels and a list of available breakpoints.
+ */
+function responsive_panels_get_config() {
+  $conf = array();
+
+  $valid = array(
+    'width',
+    'min-width',
+    'max-width',
+    'height',
+    'min-height',
+    'max-height',
+    'aspect-ratio',
+    'min-aspect-ratio',
+    'max-aspect-ratio',
+  );
+
+  $bps = responsive_panels_get_breakpoints();
+  $groups = breakpoints_breakpoint_group_load_all();
+
+  // Loop through each breakpoint and parse its conditions.
+  foreach ($bps as $breakpoint) {
+    if (!$breakpoint) {
+      continue;
+    }
+
+    // Parse the condition.
+    $conditions = responsive_panels_parse($breakpoint->breakpoint);
+
+    $point = array();
+
+    if (!empty($conditions)) {
+      foreach ($conditions as $cmd => $value) {
+        if (in_array($cmd, $valid)) {
+          $point[$cmd] = $value;
+        }
+      }
+    }
+
+    if (count($point)) {
+      // Store the settings for each breakpoint in the JS.
+      $conf['breakpoints'][$breakpoint->machine_name] = $point;
+      $conf['breakpoints'][$breakpoint->machine_name]['bp'] = $breakpoint->breakpoint;
+      $conf['breakpoints'][$breakpoint->machine_name]['css'] = $breakpoint->responsive_panels_name;
+      // Prepare group names to which this breakpoint belongs to.
+      $conf['breakpoints'][$breakpoint->machine_name]['groups'] = array();
+      foreach ($groups as $group_name => $group) {
+        if (in_array($breakpoint->machine_name, $group->breakpoints)) {
+          $conf['breakpoints'][$breakpoint->machine_name]['groups'][] = $group_name;
+        }
+      }
+    }
+  }
+
+  // Module settings.
+  $conf['autoload'] = (variable_get('responsive_panels_breakpoint_reload', 'no') != 'no') ? TRUE : FALSE;
+  $conf['adminload'] = (variable_get('responsive_panels_load_hidden_admins', 'yes') != 'no') ? TRUE : FALSE;
+  $conf['loadhidden'] = (variable_get('responsive_panels_load_hidden', 'no') != 'no') ? TRUE : FALSE;
+  $conf['showtypes'] = variable_get('responsive_panels_show_types', 'all');
+  $conf['isloggedin'] = user_is_logged_in();
+
+  $conf['hasEnquire'] = FALSE;
+  $enquire_path = libraries_get_path('enquire.js');
+  if ($enquire_path && file_exists($enquire_path . '/enquire.min.js')) {
+    $conf['hasEnquire'] = TRUE;
+  }
+
+  $conf['hasMatchMedia'] = FALSE;
+  $match_media_path = libraries_get_path('matchMedia.js');
+  if (
+    $match_media_path
+    && file_exists($match_media_path . '/matchMedia.js')
+    && file_exists($match_media_path . '/matchMedia.addListener.js')
+  ) {
+    $conf['hasMatchMedia'] = TRUE;
+  }
+  // Pass current Drupal query path, so Ajax requests can pass back it to server.
+  $conf['q'] = $_GET['q'];
+
+  return $conf;
+}
+
+/**
+ * Parse the min and max dimensions for a breakpoint.
+ */
+function responsive_panels_parse($query) {
+  $query = str_replace(' ', '', $query);
+
+  preg_match_all('/\(([a-z\-]+)\:(.+?)\)/', $query, $matches);
+
+  $point = array();
+  $count = count($matches[0]);
+  for ($i = 0; $i < $count; $i++) {
+    $cmd = $matches[1][$i];
+    $value = $matches[2][$i];
+
+    switch ($cmd) {
+      case 'width':
+      case 'min-width':
+      case 'max-width':
+      case 'height':
+      case 'min-height':
+      case 'max-height':
+      case 'device-width':
+      case 'min-device-width':
+      case 'max-device-width':
+      case 'device-height':
+      case 'min-device-height':
+      case 'max-device-height':
+        // Only px values are supported.
+        if (strpos($value, 'px') !== FALSE) {
+          $point[$cmd] = (int)str_replace('px', '', $value);
+        }
+        break;
+
+      case 'aspect-ratio':
+      case 'min-aspect-ratio':
+      case 'max-aspect-ratio':
+      case 'device-aspect-ratio':
+      case 'min-device-aspect-ratio':
+      case 'max-device-aspect-ratio':
+        $parts = explode('/', $value);
+
+        if (count($parts) === 2 && is_numeric($parts[0]) && is_numeric($parts[1])) {
+          $point[$cmd] = (float)$parts[0] / (float)$parts[1];
+        }
+
+        break;
+
+      default:
+        // Unsupported.
+        break;
+    }
+  }
+
+  return count($point) ? $point : FALSE;
+}
+
+function responsive_panels_is_ajax_delivery($pane) {
+  // Check if the processing is even required, if not return.
+  if (
+    !empty($pane->ajax_rendering)
+    || empty($pane->configuration['breakpoints'])
+    || empty($pane->pid)
+  ) {
+    // This is either an AJAX call for the real content, there are no breakpoint settings defined,
+    // or there is no valid pid on the pane, if that's the case nothing to do here, bail.
+    return FALSE;
+  }
+
+  // Default ajax to TRUE, then prove otherwise.
+  $use_ajax = FALSE;
+
+  // Determine if the pane is loaded for all available breakpoints.
+  // If so do not use ajax to load.
+  $bps = responsive_panels_get_breakpoints();
+
+  // Loop through each breakpoint and check for it, the second one isn't found we know
+  // that we need to swap in a placeholder and load the pane contents via AJAX.
+  if (!empty($bps)) {
+    foreach ($bps as $bp) {
+      if (empty($pane->configuration['breakpoints'][$bp->responsive_panels_name])) {
+        $use_ajax = TRUE;
+        break;
+      }
+    }
+  }
+
+  // If ajax is not needed for this pane, nothing else to do here, bail.
+  if (!$use_ajax) {
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+function responsive_panels_panels_pane_content_alter($content, $pane, $args, $context, panels_renderer_standard $renderer, panels_display $display) {
+  if (!responsive_panels_is_ajax_delivery($pane)) {
+    return;
+  }
+  // Set a flag so to tell this same hook not do the placeholder swap
+  // when the pane is rendered via AJAX.
+  $content->use_ajax_render = TRUE;
+
+  // Set value or hook_panels_panels_pane_output_alter() won't get called.
+  $content->content = 'It will be replaced anyway';
+}
+
+/**
+ * Implements hook_panels_panels_pane_output_alter().
+ *
+ * Checks for panes that have specific breakpoint settings and swaps their contents out for a placeholder,
+ * that will later be filled in with AJAX if rendered on the screen size being viewed on.
+ *
+ * Some code here taken from / inspired by the ajax_pane project. Thank you to creaoy, twistor, and undertext.
+ */
+function responsive_panels_panels_pane_output_alter(&$content, $pane, $args, $context, panels_renderer_standard $renderer, panels_display $display) {
+  if (!responsive_panels_is_ajax_delivery($pane)) {
+    return;
+  }
+  // ensure we have Drupal.ajax
+  drupal_add_library('system', 'drupal.ajax');
+
+  // At this point we know we have a pane with Responsive Panels settings, so we need to
+  // swap out its contents for a placeholder and the content will be be loaded after
+  // page load via AJAX to allow for caching to work between screen sizes.
+
+  // Load the supporting libraries if available.
+  if ($path = libraries_get_path('matchMedia.js')) {
+    drupal_add_js($path . '/matchMedia.js');
+    drupal_add_js($path . '/matchMedia.addListener.js');
+  }
+  if ($path = libraries_get_path('enquire.js')) {
+    drupal_add_js($path . '/enquire.min.js');
+  }
+
+  // Load the modules .js file on the page
+  drupal_add_js(drupal_get_path('module', 'responsive_panels') . '/js/responsive_panels.js');
+
+  $pass_context = array();
+  if (!module_exists('panels_mini') || !db_query("SELECT COUNT(pid) FROM {panels_mini} WHERE did = :did", array(':did' => $pane->did))->fetchField()) {
+    $task_context = page_manager_get_current_page();
+    if (stristr($task_context['name'], '-')) {
+      list($task_id, $subtask_id) = explode('-', $task_context['name']);
+    }
+    else {
+      $task_id = $task_context['name'];
+      $subtask_id = '';
+    }
+    $pass_context['task'] = $task_id;
+    $pass_context['subtask'] = $subtask_id;
+  }
+
+  if (!empty($pane->pid)) {
+    $pass_context['pid'] = $pane->pid;
+  }
+  if (!empty($args)) {
+    $pass_context['args'] = $args;
+  }
+
+  if (!empty($display->did)) {
+    $pass_context['did'] = $display->did;
+  }
+
+  // Check for panelizer, and pass context so that it can be rebuilt.
+  if (!empty($context['panelizer'])) {
+    $pass_context['panelizer'] = 1;
+    if (!empty($context['panelizer']->keyword)) {
+      $pass_context['panelizer_keyword'] = $context['panelizer']->keyword;
+    }
+    if (!empty($context['panelizer']->argument)) {
+      $pass_context['panelizer_argument'] = $context['panelizer']->argument;
+    }
+  }
+
+  // Serailize and encode the arguments needed to rebuild the context after an
+  // AJAX request asks for this pane's contents. Make this into a URL for the AJAX call.
+  $url = 'responsive-panels/get-panes/' . base64_encode(serialize($pass_context));
+
+  // Create an ID for the pane to be assigned in the DOM.
+  $id = uniqid('responsive-panels-pane-' . $pane->pid . '-');
+
+  // Loop through the breakpoints that have been set and create a class for them.
+  $classes = '';
+  foreach ($pane->configuration['breakpoints'] as $bp => $val) {
+    if (!$val) {
+      $classes .= ' hide-' . $bp;
+    }
+  }
+  $classes = trim($classes);
+
+  $ipemessage = '';
+  $css = '';
+  $hides = array();
+  $bps = responsive_panels_get_breakpoints();
+  // Loop through each breakpoint and check for if it needs added to the panes hidden styles.
+  foreach ($bps as $bp) {
+    // If the breakpoint setting is found and is set to false, then push it to the hidden array.
+    if (
+      isset($pane->configuration['breakpoints'][$bp->responsive_panels_name])
+      && $pane->configuration['breakpoints'][$bp->responsive_panels_name] == 0
+    ) {
+      array_push($hides, $bp->responsive_panels_name);
+      $ipemessage .= '<br />Hidden from ' . $bp->name;
+    }
+
+    // Add to the CSS string.
+    $css .= '@media ' . $bp->breakpoint . ' { .hide-' . $bp->responsive_panels_name . ' { display:none } .hide-responsive.panels-ipe-editing .ipe-hide-' . $bp->responsive_panels_name . ' { display:none } } .panels-ipe-editing ' . '.hide-' . $bp->responsive_panels_name . ' { display:block }';
+  }
+
+  // Add the needed CSS to the page.
+  drupal_add_css($css, array('group' => CSS_DEFAULT, 'type' => 'inline'));
+  drupal_add_css(drupal_get_path('module', 'responsive_panels') . '/responsive_panels.css', array('type' => 'file',
+    'media' => 'screen'));
+
+  // Cleanup the IPE Message.
+  if (!empty($ipemessage)) {
+    $ipemessage = '<div class="ipemessage">' . $ipemessage . '<br /><br /></div>';
+  }
+  if ($pane->type == 'views_panes') {
+    $data_query = 'data-query="' . htmlentities(json_encode((object) drupal_get_query_parameters())) . '"';
+  }
+  else {
+    $data_query = '';
+  }
+  // Preapre breakpoint group attributefor the wrapper.
+  // This group name will be considered while determinining whether to load pane via ajax.
+  if (!empty($pane->configuration['breakpoints_group']) && $pane->configuration['breakpoints_group'] != '__none') {
+    $group_attribute = 'data-bp-group="' . $pane->configuration['breakpoints_group'] . '"';
+  }
+  else {
+    $group_attribute = '';
+  }
+  // Swap content out for a placeholder.
+  $content = '<div class="' . $classes . '" data-pane="' . $pane->pid . '" ' . $group_attribute .'>' . $ipemessage . '<div id="' . $id . '" class="bp-ajax-pane" data-src="' . $url . '" ' . $data_query . '></div></div>';
+}
+
+/**
+ * Internal method to get the display object of a pane.
+ */
+function _responsive_panels_get_display_and_handler($pid=NULL, $task=NULL, $subtask_id=NULL, $context = array(), $args = array(), $did) {
+  // Make sure required ctools functions/methods will be available.
+  ctools_include('plugins', 'panels');
+  ctools_include('content');
+  ctools_include('context-task-handler');
+
+  // Load the available task handlers, which allows us to access the display.
+  $handlers = page_manager_load_sorted_handlers($task, $subtask_id ? $subtask_id : '', TRUE);
+
+  $id = ctools_context_handler_get_render_handler($task, $subtask_id ? $subtask_id : '', $handlers, $context, $args);
+  if (empty($id)) {
+    // check handlers for display with our pid.
+    foreach ($handlers as $our_id => $handler) {
+      if (empty($handler->conf['display']) && !empty($handler->conf['did'])) {
+        $temp_display = panels_load_display($handler->conf['did']);
+      }
+      else {
+        $temp_display = $handler->conf['display'];
+      }
+      if (!empty($temp_display->content[$pid])) {
+        $id = $our_id;
+        break;
+      }
+    }
+  }
+  // Load the display object.
+  if (!empty($handlers[$id]->conf['display'])) {
+    $display = $handlers[$id]->conf['display'];
+  }
+  elseif (!empty($handlers[$id]->conf['did'])) {
+    $display = panels_load_display($handlers[$id]->conf['did']);
+  }
+  // if fetching the display as usual did not work.
+  if (empty($display)) {
+    // Load the pane so that we can update the configuration.
+    $display = panels_load_display($did);
+  }
+
+  return array($display, $handlers[$id]);
+}
+
+/**
+ * Returns list of all breakpoints with a CSS friendly name.
+ * @param string $group If sepcified, it will return breakpoints part of the group.
+ */
+function responsive_panels_get_breakpoints($group = NULL) {
+  // Check the module configuration preference for which types to display as options.
+  $types = variable_get('responsive_panels_show_types', 'all');
+  if ($types == 'active') {
+    $breakpoints = breakpoints_breakpoint_load_all_active();
+  }
+  if ($types == 'module') {
+    $breakpoints = breakpoints_breakpoint_load_all_module();
+  }
+  if ($types == 'theme') {
+    global $theme_key;
+    $breakpoints = breakpoints_breakpoint_load_all_theme($theme_key);
+  }
+  if ($types == 'custom') {
+    $breakpoints = breakpoints_breakpoint_load_all_custom();
+  }
+  else {
+    $breakpoints = breakpoints_breakpoint_load_all();
+  }
+
+  if (!empty($group) && $group !== '__none') {
+    $bp_group = breakpoints_breakpoint_group_load($group);
+    foreach ($breakpoints as $key => $bp) {
+      if (!in_array($bp->machine_name, $bp_group->breakpoints)) {
+        unset($breakpoints[$key]);
+      }
+    }
+  }
+
+  // For each breakpoint find a base name to use from the machine name, then make a css
+  // friendly name the module can use as a unique identifier.
+  foreach ($breakpoints as $ix => $bp) {
+    $arr_test = explode('.', $bp->machine_name);
+    if (is_array($arr_test)) {
+      $base = array_pop($arr_test);
+    }
+    else {
+      $base = $bp->machine_name;
+    }
+
+    $breakpoints[$ix]->responsive_panels_name = drupal_clean_css_identifier(str_replace('.', '-', $bp->machine_name));
+  }
+
+  return $breakpoints;
+}
+
+/**
+ * Implements hook_boot()
+ */
+function responsive_panels_boot() {
+  global $responsive_panels_ajax;
+  if (arg(0) == 'responsive-panels' && arg(1) == 'get-panes') {
+    // Prevent ovelay JS and CSS from loading when processing get-page Ajax requests.
+    overlay_set_mode('none');
+    // Set global flag indicating that breakpoint_panel ajax request processing
+    // being doing.
+    $responsive_panels_ajax = TRUE;
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter()
+ */
+function responsive_panels_form_views_exposed_form_alter(&$form, &$form_statet, $form_id) {
+  global $responsive_panels_ajax;
+  // Clear action path views exposed form when views are rendered via breakpoint
+  // panels get-pane ajax request. Or exposed form will get submitted to
+  // 'responsive-panels/get-panes'.
+  if ((isset($responsive_panels_ajax) && $responsive_panels_ajax) || (arg(0) == 'responsive-panels' && arg(1) == 'get-panes')) {
+    $form['#action'] = '';
+  }
+}
+
+/**
+ * Implements hook_panels_pane_prerender().
+ */
+function responsive_panels_panels_pane_prerender($pane) {
+  if ($pane->type == 'views_panes') {
+    if (!responsive_panels_is_ajax_delivery($pane)) {
+      return;
+    }
+    $pane->breakpoint_active = TRUE;
+  }
+}

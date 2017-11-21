@@ -1,0 +1,12 @@
+name = Responsive Panels
+description = Display different panes for media queries.
+core = 7.x
+
+dependencies[] = ctools
+dependencies[] = panels
+dependencies[] = libraries
+dependencies[] = page_manager
+dependencies[] = breakpoints
+
+configure = admin/config/user-interface/responsive_panels
+package = "User Interface"
