@@ -487,13 +487,8 @@ function responsive_panels_panels_pane_output_alter(&$content, $pane, $args, $co
   // page load via AJAX to allow for caching to work between screen sizes.
 
   // Load the supporting libraries if available.
-  if ($path = libraries_get_path('matchMedia.js')) {
-    drupal_add_js($path . '/matchMedia.js');
-    drupal_add_js($path . '/matchMedia.addListener.js');
-  }
-  if ($path = libraries_get_path('enquire.js')) {
-    drupal_add_js($path . '/enquire.min.js');
-  }
+  libraries_load('enquire.js');
+  libraries_load('matchMedia.js');
 
   // Load the modules .js file on the page
   drupal_add_js(drupal_get_path('module', 'responsive_panels') . '/js/responsive_panels.js');
