@@ -84,7 +84,7 @@ function responsive_panels_panels_ipe_pane_links_alter(&$links, $pane, $display)
   if (isset($pane['pane']->pid) && isset($pane['display']->cache_key)) {
     $cache_key = $pane['display']->cache_key;
     $links['global'] = array(
-      'title' => t('Breakpoint settings'),
+      'title' => t('Responsive pane settings'),
       'href' => 'responsive_panels/nojs/settings/form/' . $pane['renderer']->plugin['name'] . '/' . $cache_key . '/' . $pane['pane']->pid,
       'attributes' => array(
         'class' => 'ctools-use-modal ctools-modal-modal-popup-small',
@@ -101,7 +101,7 @@ function responsive_panels_get_pane_links_alter(&$links, $pane, $content_type, $
     $cache_key = $renderer->display->cache_key;
 
     $links['style']['breakpoint_settings'] = array(
-      'title' => t('Breakpoint settings'),
+      'title' => t('Responsive pane settings'),
       'href' => 'responsive_panels/nojs/settings/form/editor/' . $cache_key . '/' . $pane->pid,
       'attributes' => array('class' => array('ctools-use-modal')),
     );
@@ -135,7 +135,7 @@ function responsive_panels_modal_popup($js = NULL, $plugin_name, $cache_key, $pi
     'display' => &$renderer->display,
     'pane' => &$pane,
     'ajax' => TRUE,
-    'title' => t('Configure breakpoint settings on !subtype_title', array('!subtype_title' => $subtype['title'])),
+    'title' => t('Configure responsive pane settings on !subtype_title', array('!subtype_title' => $subtype['title'])),
   );
 
   $modal_output = ctools_modal_form_wrapper('responsive_panels_pane_settings_form', $form_state);
