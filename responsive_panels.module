@@ -232,13 +232,14 @@ function responsive_panels_pane_settings_form($style_settings, $form_state) {
     '#type' => 'fieldset',
     '#title' => t('Rendering'),
   );
-  $form['all_elements']['rendering']['responsive_pane_render_always'] = array(
+  $form['all_elements']['rendering']['responsive_pane_load_always'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Render always'),
-    '#description' => t('Normally content for a breakpoint enabled pane does not need to be prepared while the page is being executed because Responsive Panels will replace the panel content with a placeholder later. This placeholder will then be replaced via Ajax as required as per screen dimensions.<br>'
-      . 'That normal behavior is sufficient in most cases. However, sometimes panel content may have JavaScript behaviors that will not work properly in breakpoint enabled panes if content is not prepared while the page is being executed. For example a views slideshow needs to be prepared with the page itself in order to work properly. In these edge cases, you can enable this checkbox to fix such issues.<br/> '
+    '#title' => t('Load always'),
+    '#description' => t('Normally content for a breakpoint enabled pane will not be loaded along with the page because Responsive Panel Panes module will take care of loading the pane content via Ajax as necessary.<br>'
+      . 'However, those pane content will not be available for search engines to index.<br/>'
+      . 'You would need to enable this checkbox if pane content is important to be indexed by search engines. Make sure only one pane is enabled this way among panes those holds same kind of content.<br/>'
       . 'Note: This checkbox is disabled by default.'),
-    '#default_value' => isset($pane->configuration['responsive_pane_render_always']) ? $pane->configuration['responsive_pane_render_always'] : false,
+    '#default_value' => isset($pane->configuration['responsive_pane_load_always']) ? $pane->configuration['responsive_pane_load_always'] : false,
   );
 
   $form['submit'] = array(
@@ -275,7 +276,7 @@ function responsive_panels_pane_settings_form_submit(&$form, &$form_state) {
     }
     $pane->configuration['breakpoints'][$bp->responsive_panels_name] = $form['all_elements'][$bp->responsive_panels_name]['#value'];
   }
-  $pane->configuration['responsive_pane_render_always'] = $form_state['values']['responsive_pane_render_always'];
+  $pane->configuration['responsive_pane_load_always'] = $form_state['values']['responsive_pane_load_always'];
   $form_state['executed'] = TRUE;
   $form_state['pane'] = $pane;
   return;
@@ -460,7 +461,7 @@ function responsive_panels_panels_pane_content_alter($content, $pane, $args, $co
     return;
   }
   // Panes flagged 'render_always" will have real content, so not to overwrite it.
-  if (!isset($pane->configuration['responsive_pane_render_always']) || !$pane->configuration['responsive_pane_render_always']) {
+  if (!isset($pane->configuration['responsive_pane_load_always']) || !$pane->configuration['responsive_pane_load_always']) {
     // Set value or hook_panels_panels_pane_output_alter() won't get called.
     $content->content = 'It will be replaced anyway';
   }
@@ -483,7 +484,7 @@ function responsive_panels_panels_pane_output_alter(&$content, $pane, $args, $co
     'data-pane' => $pane->pid,
   );
 
-  if (isset($pane->configuration['responsive_pane_render_always']) && $pane->configuration['responsive_pane_render_always']) {
+  if (isset($pane->configuration['responsive_pane_load_always']) && $pane->configuration['responsive_pane_load_always']) {
     // Keep real content intact.
     $content_to_place = $content;
   }
