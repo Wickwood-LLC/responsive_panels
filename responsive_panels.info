@@ -1,5 +1,5 @@
-name = Responsive Panels
-description = Display different panes for media queries.
+name = Responsive Panel Panes
+description = Display different panes for media queries to make responsive panel pages.
 core = 7.x
 
 dependencies[] = ctools
