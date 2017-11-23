@@ -235,9 +235,11 @@ function responsive_panels_pane_settings_form($style_settings, $form_state) {
   $form['all_elements']['rendering']['responsive_pane_load_always'] = array(
     '#type' => 'checkbox',
     '#title' => t('Load always'),
-    '#description' => t('Normally content for a breakpoint enabled pane will not be loaded along with the page because Responsive Panel Panes module will take care of loading the pane content via Ajax as necessary.<br>'
-      . 'However, those pane content will not be available for search engines to index.<br/>'
-      . 'You would need to enable this checkbox if pane content is important to be indexed by search engines. Make sure only one pane is enabled this way among panes those holds same kind of content.<br/>'
+    '#description' => t('<p>Normally the content for a breakpoint enabled pane will not be loaded along with the page because Responsive Panel Panes module will take care of loading the pane content via Ajax as necessary for a given screen width.</p>'
+      . '<p>However, that pane content will then not be available for search engines to index or be visible to other devices where a screen width technically does not exist.</p>'
+      . '<p>Therefore, you should enable “Load Always” for any pane content that is important to be indexed by search engines.</p>'
+      . '<p>If you have multiple instances of the same or very similar content in panels displayed at different breakpoints, then make sure only one pane is enabled so only 1 version of the content displayed to the search engines for indexing.</p>'
+      . '<p>If you have only 1 instance of panel content that is displayed for some breakpoints, then you should enable this option if you want that content to be indexed by search engines.</p>'
       . 'Note: This checkbox is disabled by default.'),
     '#default_value' => isset($pane->configuration['responsive_pane_load_always']) ? $pane->configuration['responsive_pane_load_always'] : false,
   );
