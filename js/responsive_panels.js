@@ -15,12 +15,12 @@
 
       // If no breakpoints found, then these are not the droids you're looking for, move along.
       if (
-        Drupal.settings.responsive_panels_breakpoint['breakpoints'] == 'undefined'
+        Drupal.settings.responsive_panels['breakpoints'] == 'undefined'
         || !enquire || !enquire.register
       ) {
         return;
       }
-      var settings = Drupal.settings.responsive_panels_breakpoint;
+      var settings = Drupal.settings.responsive_panels;
       var breakpoints = settings['breakpoints'];
 
       var that = this;
@@ -29,7 +29,7 @@
       // These are required or an unregister call will blow away handles that are still needed.
       for (var breakpoint in breakpoints) {
         var css = breakpoints[breakpoint]['css'];
-        Drupal.settings.responsive_panels_breakpoint['breakpoints'][breakpoint]['toggle_handler'] = {
+        Drupal.settings.responsive_panels['breakpoints'][breakpoint]['toggle_handler'] = {
           match: function () {
             if($('.panels-ipe-editing').length < 1) {
               $('.hide-' + css).hide();
@@ -127,7 +127,7 @@
        * This is generally for development purposes.
        */
 
-      var settings = Drupal.settings.responsive_panels_breakpoint;
+      var settings = Drupal.settings.responsive_panels;
       var breakpoints = settings['breakpoints'];
 
       if (!(settings['autoload'])) {
@@ -223,7 +223,7 @@
        * Checks if a pane should be loaded given the current screen size.
        */
 
-      var settings = Drupal.settings.responsive_panels_breakpoint;
+      var settings = Drupal.settings.responsive_panels;
       var breakpoints = settings['breakpoints'];
 
       var parent_el = element.parent();
@@ -265,7 +265,7 @@
         return;
       }
 
-      var settings = Drupal.settings.responsive_panels_breakpoint;
+      var settings = Drupal.settings.responsive_panels;
       var breakpoints = settings['breakpoints'];
 
       // Setup the toggle responsive button.
@@ -323,7 +323,7 @@
 
       if (panes_submit_data.length) {
         var ajax_settings = {};
-        ajax_settings.url = Drupal.settings.responsive_panels_breakpoint.url;
+        ajax_settings.url = Drupal.settings.responsive_panels.url;
         ajax_settings.submit = {
           panes: panes_submit_data
         };

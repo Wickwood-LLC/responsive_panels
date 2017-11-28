@@ -292,7 +292,7 @@ function responsive_panels_pane_settings_form_submit(&$form, &$form_state) {
 function responsive_panels_panels_pre_render($display) {
   $settings = responsive_panels_get_config();
   drupal_add_js(array(
-    'responsive_panels_breakpoint' => $settings,
+    'responsive_panels' => $settings,
   ), 'setting');
 }
 
