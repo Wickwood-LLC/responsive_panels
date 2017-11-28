@@ -355,7 +355,7 @@ function responsive_panels_get_config() {
   }
 
   // Module settings.
-  $conf['autoload'] = (variable_get('responsive_panels_breakpoint_reload', 'no') != 'no') ? TRUE : FALSE;
+  $conf['autoload'] = (variable_get('responsive_panels_reload', 'no') != 'no') ? TRUE : FALSE;
   $conf['adminload'] = (variable_get('responsive_panels_load_hidden_admins', 'yes') != 'no') ? TRUE : FALSE;
   $conf['loadhidden'] = (variable_get('responsive_panels_load_hidden', 'no') != 'no') ? TRUE : FALSE;
   $conf['showtypes'] = variable_get('responsive_panels_show_types', 'all');

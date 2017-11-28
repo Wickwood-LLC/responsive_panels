@@ -28,14 +28,14 @@
      '#default_value' => variable_get('responsive_panels_load_hidden', 'no'),
      '#description' => t('If selected, content will be loaded, but hidden via css for development purposes.'),
    );
-   $form['responsive_panels_breakpoint_reload'] = array(
+   $form['responsive_panels_reload'] = array(
      '#title' => t('Auto Reload'),
      '#type' => 'radios',
      '#options' => array(
        'no' => t('Do Not Load'),
        'yes' => t('Auto Reload'),
      ),
-     '#default_value' => variable_get('responsive_panels_breakpoint_reload', 'no'),
+     '#default_value' => variable_get('responsive_panels_reload', 'no'),
      '#description' => t('If selected, content will be refreshed on resize if media queries change.  This will annoy users but may be handy for development.'),
    );
    $form['responsive_panels_show_types'] = array(

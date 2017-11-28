@@ -69,3 +69,11 @@ function responsive_panels_uninstall() {
   variable_del('responsive_panels_breakpoint_reload');
   variable_del('responsive_panels_show_types');
 }
+
+/**
+ * Rename variable responsive_panels_breakpoint_reload to responsive_panels_reload.
+ */
+function responsive_panels_update_7001() {
+  variable_set('responsive_panels_reload', variable_get('responsive_panels_breakpoint_reload'));
+  variable_del('responsive_panels_breakpoint_reload');
+}
