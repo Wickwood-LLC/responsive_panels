@@ -362,7 +362,7 @@ function responsive_panels_get_config() {
   $conf['isloggedin'] = user_is_logged_in();
 
   // Pass current Drupal query path, so Ajax requests can pass back it to server.
-  $conf['q'] = $_GET['q'];
+  $conf['get_params'] = $_GET;
 
   return $conf;
 }
@@ -553,9 +553,6 @@ function responsive_panels_panels_pane_output_alter(&$content, $pane, $args, $co
     $attributes['id'] = uniqid('responsive-panels-pane-' . $pane->pid . '-');
     $attributes['class'][] = 'bp-ajax-pane';
 
-    if ($pane->type == 'views_panes') {
-      $attributes['data-query'] = htmlentities(json_encode((object) drupal_get_query_parameters())) . '"';
-    }
     $content_to_place = '<div ' . drupal_attributes($attributes) . '></div>';
   }
 

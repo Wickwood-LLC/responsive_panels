@@ -33,12 +33,12 @@ function responsive_panels_get_panes() {
   ctools_include('context');
   ctools_include('context-task-handler');
   // Backup existing query.
-  $old_q = $_GET['q'];
+  $old_get = $_GET;
+
+  $_GET = $_POST['get_params'];
 
   $commands = array();
   foreach ($_POST['panes'] as $pane_data) {
-    $_GET['q'] = html_entity_decode($pane_data['query']);
-
     $encoded_context = $pane_data['context'];
     $element_id = $pane_data['id'];
 
@@ -119,7 +119,7 @@ function responsive_panels_get_panes() {
     $commands[] = ajax_command_replace('#' . $element_id, $replace);
   }
   // Restore original query.
-  $_GET['q'] = $old_q;
+  $_GET = $old_get;
 
   $page = array('#type' => 'ajax', '#commands' => $commands);
   return $page;

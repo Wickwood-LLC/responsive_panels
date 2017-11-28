@@ -310,10 +310,7 @@
         if (element.length && !element.hasClass('processed')) {
           var submit_data = {
             id: element.attr('id'),
-            context: element.attr('data-context'),
-            // 'data-query' attribute will be present if pane is view pane.
-            // It is to pass original query params to view to generate correct results.
-            query: $(element).attr('data-query')
+            context: element.attr('data-context')
           };
           base = element.attr('id');
           element.addClass('processed');
@@ -325,7 +322,10 @@
         var ajax_settings = {};
         ajax_settings.url = Drupal.settings.responsive_panels.url;
         ajax_settings.submit = {
-          panes: panes_submit_data
+          panes: panes_submit_data,
+          // It is to pass original query params so to get correct results
+          // as if panes were in original page.
+          get_params: Drupal.settings.responsive_panels.get_params
         };
         var ajax = new Drupal.ajax(base, $('body'), ajax_settings);
         ajax.eventResponse($('body'), 'click');
