@@ -323,7 +323,7 @@
 
       if (panes_submit_data.length) {
         var ajax_settings = {};
-        ajax_settings.url = Drupal.settings.basePath + 'responsive-panels/get-panes';
+        ajax_settings.url = Drupal.settings.responsive_panels_breakpoint.url;
         ajax_settings.submit = {
           panes: panes_submit_data
         };
