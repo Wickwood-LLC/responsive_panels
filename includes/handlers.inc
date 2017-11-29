@@ -32,9 +32,7 @@ function responsive_panels_get_panes() {
   ctools_include('content');
   ctools_include('context');
   ctools_include('context-task-handler');
-  // Backup existing query.
-  $old_get = $_GET;
-
+  // TODO: Backup existing query if required and restore after the loop.
   $_GET = $_POST['get_params'];
 
   $commands = array();
@@ -103,23 +101,12 @@ function responsive_panels_get_panes() {
     }
 
     // Find the renderer being used for this pane.
-    $renderer = panels_get_renderer_handler($display->renderer, $display);
-
+    $renderer = panels_get_renderer_handler(!empty($context['renderer']) ? $context['renderer'] : $display->renderer, $display);
     // Render the new content.
-    $content = $renderer->render_pane_content($pane);
+    $content = $renderer->render_pane($pane);
 
-    // Setup the variables array and theme it with the panes_pane template.
-    $variables = array(
-      'content' => $content,
-      'pane' => $pane,
-      'display' => $display,
-    );
-
-    $replace = theme('panels_pane', $variables);
-    $commands[] = ajax_command_replace('#' . $element_id, $replace);
+    $commands[] = ajax_command_replace('#' . $element_id, $content);
   }
-  // Restore original query.
-  $_GET = $old_get;
 
   $page = array('#type' => 'ajax', '#commands' => $commands);
   return $page;

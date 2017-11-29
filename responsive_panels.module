@@ -533,6 +533,10 @@ function responsive_panels_panels_pane_output_alter(&$content, $pane, $args, $co
     if (!empty($display->did)) {
       $pass_context['did'] = $display->did;
     }
+    if (!empty($renderer->plugin['name'])) {
+      // Pass name of rendere to use when rendering the page on Ajax serving.
+      $pass_context['renderer'] = $renderer->plugin['name'];
+    }
 
     // Check for panelizer, and pass context so that it can be rebuilt.
     if (!empty($context['panelizer'])) {
