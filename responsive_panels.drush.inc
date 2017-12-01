@@ -20,7 +20,9 @@ function responsive_panels_drush_command() {
  * Migrate settings from BPP to RPP.
  */
 function _responsive_panels_migrate_settings(&$configuration, $delete) {
+  $changed = FALSE;
   if (isset($configuration['breakpoints'])) {
+    $changed = TRUE;
     $configuration['rpp_breakpoints'] = $configuration['breakpoints'];
     if ($delete) {
       unset($configuration['breakpoints']);
@@ -32,9 +34,11 @@ function _responsive_panels_migrate_settings(&$configuration, $delete) {
       }
     }
   }
-  if ($delete) {
+  if ($delete && isset($configuration['breakpoint_pane_render_always'])) {
+    $changed = TRUE;
     unset($configuration['breakpoint_pane_render_always']);
   }
+  return $changed;
 }
 
 function drush_responsive_panels_rpp_migrate_bpp_settings() {
@@ -72,17 +76,26 @@ function drush_responsive_panels_rpp_migrate_bpp_settings() {
     ->execute();
   while($row = $result->fetch()) {
     $display = panels_load_display($row->did);
+    print dt('Processing display with did "@did", storage type "@storage_type" and storage_id "@storage_id" ...', array('@storage_type' => $display->storage_type, '@did' => $display->did, '@storage_id' => $display->storage_id)) . PHP_EOL;
     panels_clear_cached_content($display);
+    $changed = FALSE;
     foreach ($display->content as &$pane) {
-      print dt('Migrating configuration for pane @pid...', array('@pid' => $pane->pid)) . PHP_EOL;
-      _responsive_panels_migrate_settings($pane->configuration, $delete);
+      print dt('  Processing pane of type "@type" and subtype "@subtype" in panel "@panel" with pid "@pid" ...', array('@type' => $pane->type, '@subtype' => $pane->subtype, '@panel' => $pane->panel, '@pid' => $pane->pid)) . PHP_EOL;
+      $changed |= _responsive_panels_migrate_settings($pane->configuration, $delete);
       // Process mlpanels settings for languages if exists.
       if (isset($pane->configuration['mlpanels'])) {
         foreach ($pane->configuration['mlpanels'] as &$configuration) {
-          _responsive_panels_migrate_settings($configuration, $delete);
+          $changed |= _responsive_panels_migrate_settings($configuration, $delete);
         }
       }
     }
-    panels_save_display($display);
+    if ($changed) {
+      panels_save_display($display);
+      print dt('  Display configuration changes has been saved.') . PHP_EOL;
+    }
+    else {
+      print dt('  No changes required.') . PHP_EOL;
+    }
+    print PHP_EOL;
   }
 }
