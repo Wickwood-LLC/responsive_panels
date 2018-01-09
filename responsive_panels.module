@@ -494,7 +494,7 @@ function responsive_panels_panels_pane_output_alter(&$content, $pane, $args, $co
   if ($load_always) {
     // Keep real content intact.
     $content_to_place = $content;
-    $wrapper_attributes['calss'][] = 'rpp-js-visible';
+    $wrapper_attributes['class'][] = 'rpp-js-visible';
   }
   else {
     $attributes = array();
