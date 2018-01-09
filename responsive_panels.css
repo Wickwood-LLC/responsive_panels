@@ -52,3 +52,7 @@
   background-image: -ms-linear-gradient(bottom, #616161 0%, #333333 100%);
   background-image: -webkit-gradient(linear, left bottom, left top, color-stop(0, #616161), color-stop(1, #333333));
 }
+
+.rpp-js-visible {
+  display: none;
+}

@@ -487,11 +487,14 @@ function responsive_panels_panels_pane_output_alter(&$content, $pane, $args, $co
 
   $wrapper_attributes = array(
     'data-pane' => $pane->pid,
+    'class' => array(),
   );
+  $load_always = isset($pane->configuration['responsive_pane_load_always']) && $pane->configuration['responsive_pane_load_always'];
 
-  if (isset($pane->configuration['responsive_pane_load_always']) && $pane->configuration['responsive_pane_load_always']) {
+  if ($load_always) {
     // Keep real content intact.
     $content_to_place = $content;
+    $wrapper_attributes['calss'][] = 'rpp-js-visible';
   }
   else {
     $attributes = array();
@@ -561,7 +564,6 @@ function responsive_panels_panels_pane_output_alter(&$content, $pane, $args, $co
   }
 
   // Loop through the breakpoints that have been set and create a class for them.
-  $wrapper_attributes['class'] = array();
   foreach ($pane->configuration['rpp_breakpoints'] as $bp => $val) {
     if (!$val) {
       $wrapper_attributes['class'][] = 'hide-' . $bp;
@@ -605,6 +607,11 @@ function responsive_panels_panels_pane_output_alter(&$content, $pane, $args, $co
 
   // Swap content out for a placeholder.
   $content = '<div ' . drupal_attributes($wrapper_attributes) . '>' . $ipemessage . $content_to_place . '</div>';
+  if ($load_always) {
+    // Add another copy to make it visible for JS disabled browsers.
+    // Both will not be visible for JS enabled browsers because of presense of 'rpp-js-visible' class in above content.
+    $content .= '<noscript>' . $content_to_place . '</noscript>';
+  }
 }
 
 /**

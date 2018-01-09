@@ -9,6 +9,8 @@
     breakpoint_handler_exist: [],
 
     attach: function (context) {
+      // Remove class from elements that are supposed to be visible in JS enabled browsers.
+      $('.rpp-js-visible', context).removeClass('rpp-js-visible');
       /**
        * Initializes breakpoint panels listeners and handling.
        */
