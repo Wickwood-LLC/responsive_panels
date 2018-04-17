@@ -91,10 +91,12 @@ function responsive_panels_get_panes() {
     // Set flag so that we don't rewrite content.
     $pane->ajax_rendering = TRUE;
 
-    if (!empty($passed_context['args'])) {
+    // This if condition is preventing loading of contexts for certain panes.
+    // TODO: Need to identify why this if condition was added.
+    //if (!empty($passed_context['args'])) {
       $display->context = ctools_context_handler_get_handler_contexts($contexts, $handler);
       $display->args = $passed_context['args'];
-    }
+    //}
 
     // Find the renderer being used for this pane.
     $renderer = panels_get_renderer_handler(!empty($passed_context['renderer']) ? $passed_context['renderer'] : $display->renderer, $display);
